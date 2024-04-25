@@ -33,9 +33,6 @@ class Client extends AbstractObject
         'production' => 'https://www.flow.cl/api',
         'sandbox' => 'https://sandbox.flow.cl/api',
     ]; ///< URL base para las llamadas a la API
-    protected $site = 'production';
-    protected $apiKey; ///< API Key para autenticación
-    protected $secretKey; ///< Secret Key para autenticación
     protected $response; ///< Objeto con la respuesta del servicio web de Flow.cl
 
     /**
@@ -45,13 +42,8 @@ class Client extends AbstractObject
      * @author Esteban De La Fuente Rubio, DeLaF (esteban[at]sasco.cl)
      * @version 2019-06-18
      */
-    public function __construct($api_key = null, $api_secret = null, $site = 'production')
+    public function __construct(protected $api_key = null, protected $api_secret = null, protected $site = 'production')
     {
-        if ($api_key && $api_secret) {
-            $this->setApiKey($api_key);
-            $this->setSecretKey($api_secret);
-        }
-        $this->setSite($site);
     }
 
     /**
@@ -67,8 +59,8 @@ class Client extends AbstractObject
         $url = $this->createUrl('/payment/create');
         $this->setResponse($this->consume($url, $PaymentOrder->getData()));
         $body = json_decode($this->getResponse()->getBody());
-        if ($this->getResponse()->getStatus()->code!=200) {
-            throw new \Exception('No fue posible crear la orden de pago en Flow.cl: '.$body->message);
+        if ($this->getResponse()->getStatus()->code != 200) {
+            throw new \Exception('No fue posible crear la orden de pago en Flow.cl: ' . $body->message);
         }
         $PaymentOrder->set($body);
         return $PaymentOrder;
@@ -87,8 +79,8 @@ class Client extends AbstractObject
         $url = $this->createUrl('/payment/getStatus', compact('token'));
         $this->setResponse($this->consume($url));
         $body = json_decode($this->getResponse()->getBody());
-        if ($this->getResponse()->getStatus()->code!=200) {
-            throw new \Exception('No fue posible obtener la orden de pago con token '.$token.' desde Flow.cl: '.$body->message);
+        if ($this->getResponse()->getStatus()->code != 200) {
+            throw new \Exception('No fue posible obtener la orden de pago con token ' . $token . ' desde Flow.cl: ' . $body->message);
         }
         $PaymentOrder = new \sasco\FlowCL\Payment\Order();
         $PaymentOrder->set($body);
@@ -108,8 +100,8 @@ class Client extends AbstractObject
         $url = $this->createUrl('/payment/getStatusByFlowOrder', compact('flowOrder'));
         $this->setResponse($this->consume($url));
         $body = json_decode($this->getResponse()->getBody());
-        if ($this->getResponse()->getStatus()->code!=200) {
-            throw new \Exception('No fue posible obtener la orden de pago #'.$flowOrder.' desde Flow.cl: '.$body->message);
+        if ($this->getResponse()->getStatus()->code != 200) {
+            throw new \Exception('No fue posible obtener la orden de pago #' . $flowOrder . ' desde Flow.cl: ' . $body->message);
         }
         $PaymentOrder = new \sasco\FlowCL\Payment\Order();
         $PaymentOrder->set($body);
@@ -129,8 +121,8 @@ class Client extends AbstractObject
         $url = $this->createUrl('/payment/getStatusByCommerceId', compact('commerceId'));
         $this->setResponse($this->consume($url));
         $body = json_decode($this->getResponse()->getBody());
-        if ($this->getResponse()->getStatus()->code!=200) {
-            throw new \Exception('No fue posible obtener la orden de pago '.$commerceId.' del comercio desde Flow.cl: '.$body->message);
+        if ($this->getResponse()->getStatus()->code != 200) {
+            throw new \Exception('No fue posible obtener la orden de pago ' . $commerceId . ' del comercio desde Flow.cl: ' . $body->message);
         }
         $PaymentOrder = new \sasco\FlowCL\Payment\Order();
         $PaymentOrder->set($body);
@@ -147,7 +139,7 @@ class Client extends AbstractObject
      */
     private function createUrl($recurso, array $params = [])
     {
-        $url = $this->_url[$this->getSite()].$recurso;
+        $url = $this->_url[$this->site] . $recurso;
         if (!$params) {
             return $url;
         }
@@ -167,34 +159,33 @@ class Client extends AbstractObject
      */
     private function consume($url, $data = null)
     {
-        if (!empty($this->getApiKey()) && !empty($this->getSecretKey())) {
+        if (!empty($this->api_key) && !empty($this->api_secret)) {
             // procesar datos de GET
             $url_info = parse_url($url);
             if (!empty($url_info['query'])) {
                 parse_str($url_info['query'], $data_get);
-                $data_get['apiKey'] = $this->getApiKey();
+                $data_get['apiKey'] = $this->api_key;
                 ksort($data_get);
                 $msg = [];
-                foreach($data_get as $var => $val) {
-                    $msg[] = $var.'='.$val;
+                foreach ($data_get as $var => $val) {
+                    $msg[] = $var . '=' . $val;
                 }
-                $msg['s'] = 's='.hash_hmac('sha256', implode('&', $msg), $this->getSecretKey());
-                $url = $url_info['scheme'].'://'.$url_info['host'].$url_info['path'].'?'.implode('&',$msg);
+                $msg['s'] = 's=' . hash_hmac('sha256', implode('&', $msg), $this->api_secret);
+                $url = $url_info['scheme'] . '://' . $url_info['host'] . $url_info['path'] . '?' . implode('&', $msg);
             }
             // procesar datos de POST
             if ($data) {
                 $msg = [];
-                $data['apiKey'] = $this->getApiKey();
+                $data['apiKey'] = $this->api_key;
                 ksort($data);
-                foreach($data as $var => $val) {
-                    $msg[] = $var.'='.$val;
+                foreach ($data as $var => $val) {
+                    $msg[] = $var . '=' . $val;
                 }
-                $data['s'] = hash_hmac('sha256', implode('&', $msg), $this->getSecretKey());
+                $data['s'] = hash_hmac('sha256', implode('&', $msg), $this->api_secret);
             }
         }
         $Socket = new \sasco\FlowCL\Client\Socket();
         $Response = new \sasco\FlowCL\Client\Response($Socket->consume($url, $data));
         return $Response;
     }
-
 }
