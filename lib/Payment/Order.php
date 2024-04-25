@@ -94,4 +94,12 @@ class Order extends \sasco\FlowCL\AbstractObject
         return sprintf('%s?token=%s', $this->url, $this->token);
     }
 
+     /**
+     * Get the Flow Order value
+     * @return string|null
+     */
+    public function getFlowOrder(): ?string
+    {
+        return $this->flowOrder;
+    }
 }
