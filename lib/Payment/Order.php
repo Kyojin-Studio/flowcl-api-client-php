@@ -102,4 +102,13 @@ class Order extends \sasco\FlowCL\AbstractObject
     {
         return $this->flowOrder;
     }
+
+    /**
+     * Get the order status
+     * @return string|null
+     */
+    public function getStatus(): ?string
+    {
+        return $this->status;
+    }
 }
